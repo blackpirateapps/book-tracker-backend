@@ -2,6 +2,7 @@ const endpoints = [
   { path: "/api/v1/me", description: "Firebase token verification + user bootstrap" },
   { path: "/api/v1/books", description: "List all books for the authenticated user" },
   { path: "/api/v1/books/:id", description: "Get, upsert, or soft-delete a user book" },
+  { path: "/api/v1/search", description: "OpenLibrary search proxy for add-book flows" },
   { path: "/api/v1/sync/changes", description: "Incremental sync feed for a user" },
   { path: "/api/v1/sync/push", description: "Bulk push local books to server" },
   { path: "/api/v1/uploads/cover", description: "Image upload endpoint (multipart/form-data)" },
@@ -28,6 +29,9 @@ export default function HomePage() {
               <a className="btn" href="/api/v1/books">
                 Books Endpoint
               </a>
+              <a className="btn" href="/api/v1/search?q=atomic+habits">
+                Search Proxy
+              </a>
               <a className="btn" href="https://vercel.com/new" target="_blank" rel="noreferrer">
                 Deploy to Vercel
               </a>
@@ -35,6 +39,9 @@ export default function HomePage() {
           </div>
           <aside className="panel code-card">
             <pre>{`curl "$BASE_URL/api/v1/me" \\
+  -H "Authorization: Bearer <firebase-id-token>"
+
+curl "$BASE_URL/api/v1/search?q=atomic+habits" \\
   -H "Authorization: Bearer <firebase-id-token>"
 
 curl -X POST "$BASE_URL/api/v1/uploads/cover" \\

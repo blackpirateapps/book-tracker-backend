@@ -7,6 +7,7 @@ This repository contains a deployable Next.js backend for Vercel with:
   - `GET /api/v1/me`
   - `GET /api/v1/books`
   - `GET/PUT/DELETE /api/v1/books/:id`
+  - `GET /api/v1/search`
   - `GET /api/v1/sync/changes`
   - `POST /api/v1/sync/push`
   - `POST /api/v1/uploads/cover` (multipart image upload to Vercel Blob)
@@ -17,6 +18,7 @@ This repository contains a deployable Next.js backend for Vercel with:
 - Turso-backed user-scoped books + highlights + users
 - Incremental sync (`/api/v1/sync/changes`)
 - Bulk sync push (`/api/v1/sync/push`)
+- OpenLibrary proxy search (`/api/v1/search`)
 - Cover image upload to Vercel Blob (`/api/v1/uploads/cover`)
 
 ## Local Development
@@ -126,6 +128,7 @@ Use the new authenticated base URL with these endpoints:
 - `GET /api/v1/me`
 - `GET /api/v1/books`
 - `GET/PUT/DELETE /api/v1/books/:id`
+- `GET /api/v1/search?q=<query>`
 - `GET /api/v1/sync/changes?since=<iso>`
 - `POST /api/v1/sync/push`
 - `POST /api/v1/uploads/cover` (multipart file field name: `file`)
@@ -191,6 +194,13 @@ curl "$BASE_URL/api/v1/me" \
 
 ```bash
 curl "$BASE_URL/api/v1/books?includeDeleted=true" \
+  -H "Authorization: Bearer <firebase-id-token>"
+```
+
+### Search OpenLibrary (Proxy)
+
+```bash
+curl "$BASE_URL/api/v1/search?q=atomic+habits&limit=20" \
   -H "Authorization: Bearer <firebase-id-token>"
 ```
 

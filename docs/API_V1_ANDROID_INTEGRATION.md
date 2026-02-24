@@ -56,6 +56,7 @@ If the token is missing/invalid, the server returns `401`.
 | `/api/v1/books/:id` | `DELETE` | Yes | Soft-delete a book |
 | `/api/v1/sync/changes` | `GET` | Yes | Incremental sync since timestamp |
 | `/api/v1/sync/push` | `POST` | Yes | Bulk upload/upsert books |
+| `/api/v1/search` | `GET` | Yes | OpenLibrary proxy search (normalized for app add flow) |
 | `/api/v1/uploads/cover` | `POST` | Yes | Upload cover image (`multipart/form-data`) |
 
 ## 1. `GET /api/v1/me` - Session Bootstrap
@@ -84,7 +85,7 @@ Authorization: Bearer <firebase-id-token>
   "capabilities": {
     "coverUpload": true,
     "backups": false,
-    "directSearchProxy": false
+    "directSearchProxy": true
   },
   "serverTime": "2026-02-24T23:00:00.000Z"
 }
@@ -93,8 +94,59 @@ Authorization: Bearer <firebase-id-token>
 ### Android integration notes
 
 - Call this after sign-in to validate backend auth and get `serverTime`.
-- `directSearchProxy: false` means the app should use its existing direct OpenLibrary/Google Books client flow instead of backend search proxy.
+- `directSearchProxy: true` means the app can call `/api/v1/search` for OpenLibrary search via backend.
 - `coverUpload: true` means image uploads are available at `/api/v1/uploads/cover`.
+
+## 1b. `GET /api/v1/search` - OpenLibrary Proxy Search
+
+Searches OpenLibrary and returns a normalized payload for Android add-book UX.
+
+### Query params
+
+| Param | Type | Default | Description |
+|---|---|---|---|
+| `q` | string | — | Search query (required) |
+| `limit` | int | `20` | Result count, clamped to `1..40` |
+
+### Request
+
+```http
+GET /api/v1/search?q=atomic%20habits&limit=20
+Authorization: Bearer <firebase-id-token>
+```
+
+### Response
+
+```json
+[
+  {
+    "id": "OL82563W",
+    "workId": "OL82563W",
+    "openLibraryKey": "/works/OL82563W",
+    "title": "Atomic Habits",
+    "authors": ["James Clear"],
+    "author": "James Clear",
+    "firstPublishYear": 2018,
+    "pageCount": 320,
+    "editionCount": 12,
+    "publishers": ["Avery"],
+    "isbn": ["0735211299"],
+    "languages": ["eng"],
+    "subjects": ["Habit", "Self-help"],
+    "coverId": 10431804,
+    "coverUrl": "https://covers.openlibrary.org/b/id/10431804-L.jpg",
+    "thumbnailUrl": "https://covers.openlibrary.org/b/id/10431804-M.jpg",
+    "source": "openlibrary"
+  }
+]
+```
+
+### Android integration notes
+
+- Use `id` (same as `workId`) as the external OpenLibrary work ID if you want to preserve source identity.
+- Use `thumbnailUrl` for list cards and `coverUrl` for detail previews.
+- Map to your local draft model, then persist to your own backend book ID via `PUT /api/v1/books/:id`.
+- Missing `q` returns `400`.
 
 ## 2. `GET /api/v1/books` - Full Book List
 
