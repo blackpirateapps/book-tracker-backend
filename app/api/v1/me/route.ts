@@ -1,11 +1,13 @@
 import { errorResponse, json } from "@/lib/server/http";
 import { verifyFirebaseBearerToken } from "@/lib/server/firebase";
+import { upsertUserFromFirebase } from "@/lib/server/repository";
 
 export const runtime = "nodejs";
 
 export async function GET(request: Request) {
   try {
-    const user = await verifyFirebaseBearerToken(request.headers.get("authorization"));
+    const firebaseUser = await verifyFirebaseBearerToken(request.headers.get("authorization"));
+    const user = await upsertUserFromFirebase(firebaseUser);
     return json({
       user,
       capabilities: {

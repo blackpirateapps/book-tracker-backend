@@ -47,6 +47,14 @@ async function ensureSchema() {
             createdAt TEXT NOT NULL,
             updatedAt TEXT NOT NULL
           )`);
+      await db.execute(`CREATE TABLE IF NOT EXISTS users (
+            id TEXT PRIMARY KEY,
+            email TEXT,
+            display_name TEXT,
+            photo_url TEXT,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+          )`);
       await db.execute(`CREATE INDEX IF NOT EXISTS idx_books_shelf ON books(shelf)`);
       await db.execute(`CREATE INDEX IF NOT EXISTS idx_books_finishedOn ON books(finishedOn)`);
       await db.execute(`CREATE INDEX IF NOT EXISTS idx_books_updatedAt ON books(updatedAt)`);

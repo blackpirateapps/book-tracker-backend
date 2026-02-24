@@ -471,3 +471,49 @@ export async function bulkAddTagToBooks(data: { tagId?: unknown; bookIds?: unkno
     }
   }
 }
+
+export type FirebaseUserIdentity = {
+  uid: string;
+  email: string | null;
+  name: string | null;
+  picture: string | null;
+};
+
+export async function upsertUserFromFirebase(identity: FirebaseUserIdentity) {
+  const db = await getDb();
+  const now = new Date().toISOString();
+
+  const existing = await db.execute("SELECT id, email, display_name, photo_url, created_at, updated_at FROM users WHERE id = ? LIMIT 1", [
+    identity.uid,
+  ]);
+
+  if (existing.rows.length === 0) {
+    await db.execute(
+      "INSERT INTO users (id, email, display_name, photo_url, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
+      [identity.uid, identity.email, identity.name, identity.picture, now, now] as InValue[],
+    );
+    return {
+      id: identity.uid,
+      email: identity.email,
+      displayName: identity.name,
+      photoUrl: identity.picture,
+      createdAt: now,
+      updatedAt: now,
+    };
+  }
+
+  await db.execute(
+    "UPDATE users SET email = ?, display_name = ?, photo_url = ?, updated_at = ? WHERE id = ?",
+    [identity.email, identity.name, identity.picture, now, identity.uid] as InValue[],
+  );
+
+  const row = existing.rows[0] as Record<string, unknown>;
+  return {
+    id: identity.uid,
+    email: identity.email,
+    displayName: identity.name,
+    photoUrl: identity.picture,
+    createdAt: String(row.created_at ?? now),
+    updatedAt: now,
+  };
+}

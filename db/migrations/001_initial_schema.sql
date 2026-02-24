@@ -30,6 +30,15 @@ CREATE TABLE IF NOT EXISTS tags (
   updatedAt TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS users (
+  id TEXT PRIMARY KEY,
+  email TEXT,
+  display_name TEXT,
+  photo_url TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
 CREATE INDEX IF NOT EXISTS idx_books_shelf ON books(shelf);
 CREATE INDEX IF NOT EXISTS idx_books_finishedOn ON books(finishedOn);
 CREATE INDEX IF NOT EXISTS idx_books_updatedAt ON books(updatedAt);
