@@ -425,7 +425,7 @@ export async function updateTag(data: { id?: unknown; name?: unknown; color?: un
   sets.push("updatedAt = ?");
   args.push(new Date().toISOString());
   const db = await getDb();
-  await db.execute(`UPDATE tags SET ${sets.join(", ")} WHERE id = ?`, [...args, id]);
+  await db.execute(`UPDATE tags SET ${sets.join(", ")} WHERE id = ?`, [...args, id] as InValue[]);
 }
 
 export async function deleteTag(id: string) {
