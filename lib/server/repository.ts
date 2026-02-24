@@ -93,10 +93,7 @@ export async function listAllBooks() {
 
 export async function getBookById(id: string) {
   const db = await getDb();
-  const result = await db.execute({
-    sql: "SELECT * FROM books WHERE id = ? LIMIT 1",
-    args: [id],
-  });
+  const result = await db.execute("SELECT * FROM books WHERE id = ? LIMIT 1", [id]);
   const row = result.rows[0];
   return row ? rowFromSql(row as Record<string, unknown>) : null;
 }
@@ -263,13 +260,13 @@ export async function addBookFromOpenLibrary(params: { olid: string; shelf?: str
     updatedAt: now,
   });
 
-  await db.execute({
-    sql: `INSERT INTO books (
+  await db.execute(
+    `INSERT INTO books (
       id, title, authors, imageLinks, pageCount, publishedDate, fullPublishDate, publisher,
       industryIdentifiers, highlights, startedOn, finishedOn, readingMedium, shelf, hasHighlights,
       readingProgress, bookDescription, subjects, tags, createdAt, updatedAt
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    args: [
+    [
       book.id,
       book.title,
       book.authors,
@@ -292,7 +289,7 @@ export async function addBookFromOpenLibrary(params: { olid: string; shelf?: str
       now,
       now,
     ],
-  });
+  );
 
   return book;
 }
@@ -346,17 +343,17 @@ export async function updateBook(data: Record<string, unknown>) {
   }
 
   const setClause = entries.map(([key]) => `${key} = ?`).join(", ");
-  await db.execute({
-    sql: `UPDATE books SET ${setClause} WHERE id = ?`,
-    args: [...entries.map(([, value]) => value as unknown), originalId],
-  });
+  await db.execute(`UPDATE books SET ${setClause} WHERE id = ?`, [
+    ...entries.map(([, value]) => value as unknown),
+    originalId,
+  ]);
 
   return { rowsAffected: 1 };
 }
 
 export async function deleteBook(id: string) {
   const db = await getDb();
-  await db.execute({ sql: "DELETE FROM books WHERE id = ?", args: [id] });
+  await db.execute("DELETE FROM books WHERE id = ?", [id]);
 }
 
 export function parseHighlightsFile(fileContent: string, fileName: string) {
@@ -401,10 +398,13 @@ export async function createTag(data: { name?: unknown; color?: unknown }) {
   const id = `tag_${Date.now()}`;
   const now = new Date().toISOString();
   const db = await getDb();
-  await db.execute({
-    sql: "INSERT INTO tags (id, name, color, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?)",
-    args: [id, name, color, now, now],
-  });
+  await db.execute("INSERT INTO tags (id, name, color, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?)", [
+    id,
+    name,
+    color,
+    now,
+    now,
+  ]);
   return { id };
 }
 
@@ -426,25 +426,23 @@ export async function updateTag(data: { id?: unknown; name?: unknown; color?: un
   sets.push("updatedAt = ?");
   args.push(new Date().toISOString());
   const db = await getDb();
-  await db.execute({
-    sql: `UPDATE tags SET ${sets.join(", ")} WHERE id = ?`,
-    args: [...args, id],
-  });
+  await db.execute(`UPDATE tags SET ${sets.join(", ")} WHERE id = ?`, [...args, id]);
 }
 
 export async function deleteTag(id: string) {
   const db = await getDb();
-  await db.execute({ sql: "DELETE FROM tags WHERE id = ?", args: [id] });
+  await db.execute("DELETE FROM tags WHERE id = ?", [id]);
 
   const books = await listAllBooks();
   await Promise.all(
     books.map(async (book) => {
       const tags = safeJsonParse<string[]>(book.tags, []).filter((tag) => tag !== id);
       if (tags.length !== safeJsonParse<string[]>(book.tags, []).length) {
-        await db.execute({
-          sql: "UPDATE books SET tags = ?, updatedAt = ? WHERE id = ?",
-          args: [JSON.stringify(tags), new Date().toISOString(), book.id],
-        });
+        await db.execute("UPDATE books SET tags = ?, updatedAt = ? WHERE id = ?", [
+          JSON.stringify(tags),
+          new Date().toISOString(),
+          book.id,
+        ]);
       }
     }),
   );
@@ -466,10 +464,11 @@ export async function bulkAddTagToBooks(data: { tagId?: unknown; bookIds?: unkno
     const tags = safeJsonParse<string[]>(book.tags, []);
     if (!tags.includes(tagId)) {
       tags.push(tagId);
-      await db.execute({
-        sql: "UPDATE books SET tags = ?, updatedAt = ? WHERE id = ?",
-        args: [JSON.stringify(tags), now, bookId],
-      });
+      await db.execute("UPDATE books SET tags = ?, updatedAt = ? WHERE id = ?", [
+        JSON.stringify(tags),
+        now,
+        bookId,
+      ]);
     }
   }
 }
