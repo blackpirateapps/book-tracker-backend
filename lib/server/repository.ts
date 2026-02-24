@@ -1,3 +1,4 @@
+import type { InValue } from "@libsql/client";
 import { getDb } from "@/lib/server/db";
 import { safeJsonParse, toJsonString } from "@/lib/server/json";
 import { DEFAULT_BOOK_VALUES, type BookRow, type TagRow } from "@/lib/server/types";
@@ -343,10 +344,8 @@ export async function updateBook(data: Record<string, unknown>) {
   }
 
   const setClause = entries.map(([key]) => `${key} = ?`).join(", ");
-  await db.execute(`UPDATE books SET ${setClause} WHERE id = ?`, [
-    ...entries.map(([, value]) => value as unknown),
-    originalId,
-  ]);
+  const sqlArgs = [...entries.map(([, value]) => value), originalId] as InValue[];
+  await db.execute(`UPDATE books SET ${setClause} WHERE id = ?`, sqlArgs);
 
   return { rowsAffected: 1 };
 }
