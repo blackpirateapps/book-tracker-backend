@@ -4,17 +4,12 @@ import { getUserBook, softDeleteUserBook, type V1BookPayload, upsertUserBook } f
 
 export const runtime = "nodejs";
 
-type ParamsLike = { params: { id: string } | Promise<{ id: string }> };
+type RouteContext = { params: Promise<{ id: string }> };
 
-async function readId(params: ParamsLike["params"]) {
-  const resolved = await Promise.resolve(params);
-  return resolved.id;
-}
-
-export async function GET(request: Request, { params }: ParamsLike) {
+export async function GET(request: Request, { params }: RouteContext) {
   try {
     const user = await verifyFirebaseBearerToken(request.headers.get("authorization"));
-    const id = await readId(params);
+    const { id } = await params;
     const book = await getUserBook(user.uid, id);
     if (!book) {
       return errorResponse(404, "Book not found");
@@ -26,10 +21,10 @@ export async function GET(request: Request, { params }: ParamsLike) {
   }
 }
 
-export async function PUT(request: Request, { params }: ParamsLike) {
+export async function PUT(request: Request, { params }: RouteContext) {
   try {
     const user = await verifyFirebaseBearerToken(request.headers.get("authorization"));
-    const id = await readId(params);
+    const { id } = await params;
     const body = await parseJsonBody<V1BookPayload>(request);
     const result = await upsertUserBook(user.uid, id, body);
     if (result.conflict) {
@@ -42,10 +37,10 @@ export async function PUT(request: Request, { params }: ParamsLike) {
   }
 }
 
-export async function DELETE(request: Request, { params }: ParamsLike) {
+export async function DELETE(request: Request, { params }: RouteContext) {
   try {
     const user = await verifyFirebaseBearerToken(request.headers.get("authorization"));
-    const id = await readId(params);
+    const { id } = await params;
     const result = await softDeleteUserBook(user.uid, id);
     return json({ message: "Deleted", ...result });
   } catch (error) {
