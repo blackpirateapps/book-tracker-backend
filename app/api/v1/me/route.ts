@@ -11,9 +11,9 @@ export async function GET(request: Request) {
     return json({
       user,
       capabilities: {
-        coverUpload: false,
+        coverUpload: true,
         backups: false,
-        directSearchProxy: true,
+        directSearchProxy: false,
       },
       serverTime: new Date().toISOString(),
     });

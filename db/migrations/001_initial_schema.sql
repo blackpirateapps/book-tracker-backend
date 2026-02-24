@@ -39,6 +39,44 @@ CREATE TABLE IF NOT EXISTS users (
   updated_at TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS user_books (
+  id TEXT NOT NULL,
+  user_id TEXT NOT NULL,
+  title TEXT NOT NULL,
+  author TEXT NOT NULL DEFAULT '',
+  notes TEXT NOT NULL DEFAULT '',
+  cover_url TEXT NOT NULL DEFAULT '',
+  cover_storage_key TEXT,
+  status TEXT NOT NULL,
+  rating INTEGER NOT NULL DEFAULT 0,
+  page_count INTEGER NOT NULL DEFAULT 0,
+  progress_percent INTEGER NOT NULL DEFAULT 0,
+  medium TEXT NOT NULL DEFAULT '',
+  start_date_iso TEXT,
+  end_date_iso TEXT,
+  created_at_iso TEXT NOT NULL,
+  updated_at_iso TEXT NOT NULL,
+  deleted_at_iso TEXT,
+  version INTEGER NOT NULL DEFAULT 1,
+  PRIMARY KEY (user_id, id)
+);
+
+CREATE TABLE IF NOT EXISTS user_book_highlights (
+  id TEXT NOT NULL,
+  user_id TEXT NOT NULL,
+  book_id TEXT NOT NULL,
+  position INTEGER NOT NULL DEFAULT 0,
+  text TEXT NOT NULL,
+  created_at_iso TEXT NOT NULL,
+  updated_at_iso TEXT NOT NULL,
+  PRIMARY KEY (user_id, id)
+);
+
 CREATE INDEX IF NOT EXISTS idx_books_shelf ON books(shelf);
 CREATE INDEX IF NOT EXISTS idx_books_finishedOn ON books(finishedOn);
 CREATE INDEX IF NOT EXISTS idx_books_updatedAt ON books(updatedAt);
+CREATE INDEX IF NOT EXISTS idx_user_books_updated ON user_books(user_id, updated_at_iso);
+CREATE INDEX IF NOT EXISTS idx_user_books_deleted ON user_books(user_id, deleted_at_iso);
+CREATE INDEX IF NOT EXISTS idx_user_books_status ON user_books(user_id, status);
+CREATE INDEX IF NOT EXISTS idx_user_book_highlights_book ON user_book_highlights(user_id, book_id);
+CREATE INDEX IF NOT EXISTS idx_user_book_highlights_updated ON user_book_highlights(user_id, updated_at_iso);

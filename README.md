@@ -1,30 +1,23 @@
 # Book Tracker Backend (Next.js + Turso)
 
-This repository now contains a deployable Next.js app for Vercel with:
+This repository contains a deployable Next.js backend for Vercel with:
 
 - A landing page at `/`
-- Android-compatible API routes from `docs/API_DOCS.md`
-  - `GET /api/public`
-  - `GET/POST /api/books`
-  - `GET /api/search`
-- A Firebase-ready bootstrap endpoint for future authenticated sync:
-  - `GET /api/v1/me` (verifies Firebase ID token)
+- Firebase-authenticated user API routes:
+  - `GET /api/v1/me`
+  - `GET /api/v1/books`
+  - `GET/PUT/DELETE /api/v1/books/:id`
+  - `GET /api/v1/sync/changes`
+  - `POST /api/v1/sync/push`
+  - `POST /api/v1/uploads/cover` (multipart image upload to Vercel Blob)
 
 ## What This Implements (Now)
 
-- Turso-backed storage for books and tags
-- Admin password protected write API (`/api/books` `POST`)
-- OpenLibrary search + add flow
-- Public read APIs (browse/search/stats/random highlight/tags)
-- Hugo export payload (`/api/books?action=export-hugo`)
-
-## What Is Stubbed (Future)
-
-- `/api/v1/books`
-- `/api/v1/sync/changes`
-- `/api/v1/sync/push`
-
-These return `501` and are intended to be built from `docs/API_AGENT_BACKEND_BUILD_SPEC.md`.
+- Firebase ID token verification (`Authorization: Bearer ...`)
+- Turso-backed user-scoped books + highlights + users
+- Incremental sync (`/api/v1/sync/changes`)
+- Bulk sync push (`/api/v1/sync/push`)
+- Cover image upload to Vercel Blob (`/api/v1/uploads/cover`)
 
 ## Local Development
 
@@ -91,6 +84,17 @@ turso db shell book-tracker < db/migrations/001_initial_schema.sql
 
 Note: The app also lazily creates the required tables on first request, but running the migration explicitly is better for repeatable setup.
 
+## Vercel Blob Setup (Cover Uploads)
+
+1. In Vercel, open your project.
+2. Go to `Storage` and create a `Blob` store.
+3. Vercel will provide a `BLOB_READ_WRITE_TOKEN`.
+4. Add it to local `.env.local` and Vercel env vars.
+
+Required env var:
+
+- `BLOB_READ_WRITE_TOKEN`
+
 ## Vercel Setup (Deploy)
 
 1. Push this repo to GitHub/GitLab/Bitbucket.
@@ -101,9 +105,10 @@ Note: The app also lazily creates the required tables on first request, but runn
 
 4. Add environment variables in Vercel Project Settings:
 
-- `ADMIN_PASSWORD` (required for `/api/books` POST)
 - `TURSO_DATABASE_URL` (required)
 - `TURSO_AUTH_TOKEN` (required)
+- `BLOB_READ_WRITE_TOKEN` (required for uploads)
+- Firebase Admin env vars (required for authenticated routes)
 - `NEXT_PUBLIC_APP_NAME` (optional branding text)
 
 5. Deploy.
@@ -116,13 +121,16 @@ Use that as the Android app backend base URL.
 
 ### Android App Integration
 
-Based on `docs/API_DOCS.md`, the app should call:
+Use the new authenticated base URL with these endpoints:
 
-- `GET /api/public`
-- `GET/POST /api/books`
-- `GET /api/search`
+- `GET /api/v1/me`
+- `GET /api/v1/books`
+- `GET/PUT/DELETE /api/v1/books/:id`
+- `GET /api/v1/sync/changes?since=<iso>`
+- `POST /api/v1/sync/push`
+- `POST /api/v1/uploads/cover` (multipart file field name: `file`)
 
-If the Android app has a configurable backend URL setting, set it to your Vercel base URL (no trailing slash).
+Set the Android app backend URL to your Vercel base URL (no trailing slash).
 
 ## Firebase Setup (For `/api/v1/me` and Future Sync)
 
@@ -172,36 +180,46 @@ Expected result: user profile + server capabilities JSON.
 
 ## API Examples
 
-### Search OpenLibrary
+### Bootstrap User Session
 
 ```bash
-curl "$BASE_URL/api/search?q=atomic+habits"
+curl "$BASE_URL/api/v1/me" \
+  -H "Authorization: Bearer <firebase-id-token>"
 ```
 
-### Add a Book (Admin)
+### List User Books
 
 ```bash
-curl -X POST "$BASE_URL/api/books" \
+curl "$BASE_URL/api/v1/books?includeDeleted=true" \
+  -H "Authorization: Bearer <firebase-id-token>"
+```
+
+### Upsert a Book
+
+```bash
+curl -X PUT "$BASE_URL/api/v1/books/book_123" \
+  -H "Authorization: Bearer <firebase-id-token>" \
   -H "Content-Type: application/json" \
   -d '{
-    "password":"'"$ADMIN_PASSWORD"'",
-    "action":"add",
-    "data":{"olid":"OL82563W","shelf":"currentlyReading"}
+    "id":"book_123",
+    "title":"Atomic Habits",
+    "author":"James Clear",
+    "status":"reading",
+    "progressPercent":42,
+    "highlights":[{"text":"Small habits compound."}]
   }'
 ```
 
-### List Public Books
+### Upload a Cover Image
 
 ```bash
-curl "$BASE_URL/api/public?limit=20&offset=0"
+curl -X POST "$BASE_URL/api/v1/uploads/cover" \
+  -H "Authorization: Bearer <firebase-id-token>" \
+  -F "file=@/path/to/cover.jpg"
 ```
 
 ## Notes / Tradeoffs
 
-- `action: "add"` pulls metadata from OpenLibrary and stores a remote cover URL. It does not currently download/compress/store covers in Vercel Blob.
-- `/api/v1/*` sync endpoints are intentionally scaffolded but not fully implemented yet.
-- The current implementation stores several fields as JSON strings to match the Android API docs and existing client expectations.
-
-## Suggested Next Step (Backend)
-
-Implement the full Firebase user-scoped sync API from `docs/API_AGENT_BACKEND_BUILD_SPEC.md` in parallel with the existing `/api/*` routes so old and new app clients can coexist during migration.
+- Legacy unauthenticated/admin routes (`/api/public`, `/api/books`, `/api/search`) were removed.
+- Upload endpoint stores files in Vercel Blob and returns a public URL/pathname for saving on the book row.
+- The `v1` schema is user-scoped and separate from the earlier prototype tables.
